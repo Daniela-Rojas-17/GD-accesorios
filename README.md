@@ -1,14 +1,19 @@
 # Miyuki Accesorios
 
-Página de emprendimiento de accesorios hechos a mano con mostacillas Miyuki.
+Catálogo de accesorios hechos a mano con mostacillas Miyuki, en versión web estática y Streamlit.
 
-## Publicación
+## Publicar en Streamlit Community Cloud
 
-El flujo de GitHub Actions de `.github/workflows/pages.yml` publica el sitio en GitHub Pages al subir cambios a la rama `main`. Solo se publica la página y sus recursos; el archivo `miyuki.py` y el espacio de trabajo local se excluyen.
+1. Inicia sesión en [Streamlit Community Cloud](https://share.streamlit.io/) con la cuenta de GitHub que tiene acceso a este repositorio.
+2. Selecciona **Create app** y el repositorio `Daniela-Rojas-17/GD-accesorios`.
+3. Elige la rama `main` y el archivo principal `app.py`.
+4. En **Advanced settings**, selecciona Python 3.12 y crea la app.
+5. Cuando termine el despliegue, comparte la URL que te asigne Streamlit.
 
-Para activar GitHub Pages:
+Streamlit instalará automáticamente las dependencias de `requirements.txt`. Los cambios que subas a `main` se publican automáticamente.
 
-1. Abre **Settings → Pages** en el repositorio.
-2. En **Build and deployment**, elige **GitHub Actions** como fuente.
-3. Espera a que termine el flujo **Publicar sitio en GitHub Pages** en la pestaña **Actions**.
-4. Comparte `https://daniela-rojas-17.github.io/GD-accesorios/`.
+## Versión estática en GitHub Pages
+
+La página estática también se publica automáticamente desde `main` con el flujo de GitHub Actions en `.github/workflows/pages.yml`:
+
+<https://daniela-rojas-17.github.io/GD-accesorios/>

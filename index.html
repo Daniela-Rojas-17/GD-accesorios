@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c7eee4">
+    <meta name="description" content="Accesorios Miyuki hechos a mano, inspirados en la naturaleza y las estrellas.">
+    <title>Miyuki Accesorios | Amuletos hechos a mano</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#inicio" aria-label="Miyuki Accesorios, inicio">
+        <img src="assets/logo-miyuki.png" alt="Logo de Miyuki Accesorios">
+      </a>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a href="#catalogo">Colección</a>
+        <a href="#zodiaco">Universo zodiacal</a>
+        <a href="#historia">Nuestra esencia</a>
+      </nav>
+      <a class="bag-link" href="#pedido">
+        <span>Tu pedido</span>
+        <span class="bag-count" id="bag-count" aria-live="polite">0</span>
+      </a>
+    </header>
+
+    <main>
+      <section class="hero" id="inicio">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-mark">✳</span> Hecho a mano, con intención</p>
+          <h1>Un pequeño universo <em>en tus manos.</em></h1>
+          <p class="hero-description">
+            Accesorios Miyuki tejidos puntada a puntada. Inspiración japonesa,
+            naturaleza y un toque de magia astral para acompañarte cada día.
+          </p>
+          <a class="button button-dark" href="#catalogo">Descubrir la colección <span aria-hidden="true">↗</span></a>
+          <div class="hero-note">
+            <span class="hero-note-line"></span>
+            <span>Pequeños detalles, energía infinita</span>
+          </div>
+        </div>
+        <div class="hero-art" aria-label="Logo de Miyuki Accesorios rodeado de estrellas">
+          <img class="sakura-illustration" src="assets/ilustraciones/ramo-sakura.svg" alt="" aria-hidden="true">
+          <span class="orbit orbit-one"></span>
+          <span class="orbit orbit-two"></span>
+          <span class="orbit-star star-one">✦</span>
+          <span class="orbit-star star-two">✧</span>
+          <span class="orbit-star star-three">✳</span>
+          <span class="moon-shape"></span>
+          <img class="hero-logo" src="assets/logo-miyuki.png" alt="">
+          <span class="hero-caption">Hecho con calma · para brillar a tu manera</span>
+        </div>
+        <a class="scroll-cue" href="#catalogo" aria-label="Desliza para ver la colección">↓</a>
+      </section>
+
+      <section class="promise-row" aria-label="Nuestra inspiración">
+        <div><span class="promise-symbol">和</span><span>Inspiración japonesa</span></div>
+        <div><span class="promise-symbol">✺</span><span>Tejido artesanal</span></div>
+        <div><span class="promise-symbol">☾</span><span>Detalles con significado</span></div>
+      </section>
+
+      <section class="catalog-section section-wrap" id="catalogo">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Colección Miyuki</p>
+            <h2>Encuentra tu <em>amuleto</em></h2>
+          </div>
+          <p class="section-intro">Piezas inspiradas en los colores, símbolos y pequeños momentos que hacen único tu universo.</p>
+        </div>
+
+        <div class="catalog-controls">
+          <div class="filter-list" id="category-filters" aria-label="Filtrar por categoría">
+            <button class="filter-button is-active" type="button" data-category="todos" aria-pressed="true">Todo</button>
+            <button class="filter-button" type="button" data-category="pulseras" aria-pressed="false">Pulseras</button>
+            <button class="filter-button" type="button" data-category="llaveros" aria-pressed="false">Llaveros</button>
+            <button class="filter-button" type="button" data-category="colgantes" aria-pressed="false">Colgantes</button>
+            <button class="filter-button" type="button" data-category="prendedores" aria-pressed="false">Prendedores</button>
+          </div>
+          <label class="search-field">
+            <span class="visually-hidden">Buscar un diseño</span>
+            <span aria-hidden="true">⌕</span>
+            <input id="catalog-search" type="search" placeholder="Busca un diseño..." autocomplete="off">
+          </label>
+        </div>
+
+        <p class="catalog-count" id="catalog-count" aria-live="polite"></p>
+        <div class="product-grid" id="product-grid"></div>
+      </section>
+
+      <section class="zodiac-section" id="zodiaco">
+        <div class="zodiac-orbit zodiac-orbit-a"></div>
+        <div class="zodiac-orbit zodiac-orbit-b"></div>
+        <div class="zodiac-copy">
+          <p class="eyebrow">Una guía entre estrellas</p>
+          <h2>¿Qué signo acompaña <em>tu camino?</em></h2>
+          <p>En la colección hay pulseras zodiacales tejidas con cuentas Miyuki. Elige uno de los diseños disponibles y encuentra el tuyo.</p>
+          <div class="zodiac-picker">
+            <label for="zodiac-select">Elige tu signo</label>
+            <div class="zodiac-picker-row">
+              <select id="zodiac-select">
+                <option value="">Selecciona un signo</option>
+                <option value="tauro">Tauro</option>
+                <option value="escorpio">Escorpio</option>
+                <option value="leo">Leo</option>
+                <option value="geminis">Géminis</option>
+                <option value="capricornio">Capricornio</option>
+                <option value="libra">Libra</option>
+              </select>
+              <button class="button button-light" id="find-zodiac" type="button">Ver pulsera <span aria-hidden="true">↗</span></button>
+            </div>
+            <p class="zodiac-feedback" id="zodiac-feedback" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="zodiac-visual" aria-hidden="true">
+          <svg class="zodiac-wheel" viewBox="0 0 420 420" role="img" aria-labelledby="wheel-title">
+            <title id="wheel-title">Rueda ilustrada con los doce signos del zodiaco</title>
+            <circle class="wheel-outer" cx="210" cy="210" r="190"/>
+            <circle class="wheel-ring" cx="210" cy="210" r="165"/>
+            <circle class="wheel-ring wheel-ring-inner" cx="210" cy="210" r="113"/>
+            <circle class="wheel-center" cx="210" cy="210" r="68"/>
+            <g class="wheel-spokes">
+              <path d="M210 20v77M210 323v77M20 210h77M323 210h77M75.65 75.65l54.45 54.45m159.8 159.8 54.45 54.45M344.35 75.65l-54.45 54.45m-159.8 159.8-54.45 54.45"/>
+              <path d="m210 45 42 13m93 110 13 42m-13 42-93 110m-42 13-42-13M75 210l13-42m29-84 51-38m94 0 51 38"/>
+            </g>
+            <g class="wheel-signs">
+              <text x="210" y="59">&#x2648;&#xFE0E;</text><text x="286" y="80">&#x2649;&#xFE0E;</text>
+              <text x="341" y="135">&#x264A;&#xFE0E;</text><text x="361" y="218">&#x264B;&#xFE0E;</text>
+              <text x="332" y="300">&#x264C;&#xFE0E;</text><text x="267" y="352">&#x264D;&#xFE0E;</text>
+              <text x="210" y="375">&#x264E;&#xFE0E;</text><text x="133" y="352">&#x264F;&#xFE0E;</text>
+              <text x="78" y="300">&#x2650;&#xFE0E;</text><text x="58" y="218">&#x2651;&#xFE0E;</text>
+              <text x="83" y="135">&#x2652;&#xFE0E;</text><text x="144" y="80">&#x2653;&#xFE0E;</text>
+            </g>
+            <g class="wheel-stars">
+              <path d="m210 161 4 11 11 4-11 4-4 11-4-11-11-4 11-4zm0 58 3 8 8 3-8 3-3 8-3-8-8-3 8-3z"/>
+              <circle cx="181" cy="196" r="2"/><circle cx="239" cy="197" r="2"/>
+              <circle cx="189" cy="228" r="1.5"/><circle cx="232" cy="228" r="1.5"/>
+            </g>
+            <g class="wheel-torii">
+              <path d="M183 192h54l-5 5h-44l-5-5Zm6 9h42l-4 5h-34l-4-5Zm4 7v24m29-24v24m-29-7h29"/>
+            </g>
+            <path class="wheel-moon" d="M253 139a25 25 0 1 1-28-37 21 21 0 0 0 28 37Z"/>
+            <text class="wheel-caption" x="210" y="410">UN PEQUEÑO UNIVERSO</text>
+          </svg>
+        </div>
+      </section>
+
+      <section class="order-section section-wrap" id="pedido">
+        <div class="section-heading order-heading">
+          <div>
+            <p class="eyebrow">Tu selección</p>
+            <h2>Un pedido <em>con intención</em></h2>
+          </div>
+          <p class="section-intro">Revisa tus piezas y copia el resumen para compartirlo con Miyuki Accesorios.</p>
+        </div>
+        <div class="order-panel">
+          <div class="order-lines" id="order-lines" aria-live="polite"></div>
+          <div class="order-summary">
+            <div class="summary-row"><span>Piezas</span><span id="order-quantity">0</span></div>
+            <div class="summary-row summary-total"><span>Total de referencia</span><span id="order-total">$0</span></div>
+            <p class="price-note">Precios de referencia en pesos colombianos. El envío se cotiza por separado.</p>
+            <div class="order-actions">
+              <button class="button button-dark" id="copy-order" type="button" disabled>Copiar mi pedido</button>
+              <button class="clear-order" id="clear-order" type="button" disabled>Vaciar pedido</button>
+            </div>
+            <p class="copy-feedback" id="copy-feedback" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="essence-section section-wrap" id="historia">
+        <div class="essence-seal" aria-hidden="true"><span>和</span><i>✦</i></div>
+        <div>
+          <p class="eyebrow">Nuestra esencia</p>
+          <h2>El arte de crear <em>despacito.</em></h2>
+          <p>Cada diseño nace de la paciencia de tejer pequeñas cuentas y convertirlas en algo que puedas llevar contigo. Color, intención y un pedacito de cielo, hecho a mano.</p>
+        </div>
+        <a class="text-link" href="#catalogo">Explorar diseños <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="#inicio">Miyuki <span>Accesorios</span></a>
+      <p>Hecho a mano con calma, para brillar a tu manera.</p>
+      <a href="#inicio">Volver arriba ↑</a>
+    </footer>
+  </body>
+</html>

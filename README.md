@@ -2,6 +2,17 @@
 
 Catálogo de accesorios hechos a mano con mostacillas Miyuki, en versión web estática y Streamlit.
 
+## Opciones de la app Streamlit
+
+La app incluye catálogo, inventario, recomendador por estilo/ocasión/presupuesto,
+gestión del pedido, cotización con descuentos e IVA, planificación de producción,
+confirmación del pedido y reabastecimiento.
+
+Los precios del catálogo se conservan como referencia. Las recetas de materiales,
+los tiempos de producción, costos y existencias son datos de demostración inventados.
+El inventario y los pedidos confirmados solo se conservan en la sesión actual; no
+representan existencias compartidas ni persistentes del emprendimiento.
+
 ## Publicar en Streamlit Community Cloud
 
 1. Inicia sesión en [Streamlit Community Cloud](https://share.streamlit.io/) con la cuenta de GitHub que tiene acceso a este repositorio.

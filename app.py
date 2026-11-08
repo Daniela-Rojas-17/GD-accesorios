@@ -1,13 +1,31 @@
 from __future__ import annotations
 
 import base64
+from copy import deepcopy
+from datetime import date, timedelta
+from math import ceil
 from pathlib import Path
+import re
 
 import streamlit as st
 
 
 ROOT = Path(__file__).parent
 ASSETS = ROOT / "assets"
+IVA_RATE = 0.19
+HOURS_PER_DAY = 4
+RESTOCK_DAYS = 3
+STYLE_OPTIONS = ("minimalista", "colorido", "elegante")
+OCCASION_OPTIONS = ("diario", "fiesta", "regalo")
+INITIAL_INVENTORY = {
+    "delica": {"name": "Cuentas Miyuki Delica 11/0", "unit": "g", "stock": 120, "cost": 900},
+    "rocalla": {"name": "Rocalla Miyuki 8/0", "unit": "g", "stock": 80, "cost": 700},
+    "hilo": {"name": "Hilo Nymo", "unit": "m", "stock": 200, "cost": 150},
+    "cierre": {"name": "Cierre metálico", "unit": "unidad", "stock": 30, "cost": 1500},
+    "gancho": {"name": "Gancho para aretes", "unit": "par", "stock": 25, "cost": 1200},
+    "dije": {"name": "Dije decorativo", "unit": "unidad", "stock": 15, "cost": 2500},
+    "cristal": {"name": "Cristal facetado", "unit": "unidad", "stock": 60, "cost": 400},
+}
 CATEGORIES = {
     "Todos": "todos",
     "Pulseras": "pulseras",
@@ -51,6 +69,7 @@ PRODUCTS = [
     {"id": "prendedor-gorro-rojo", "name": "Gorro Navidad Rojo y Verde", "category": "prendedores", "collection": "Prendedor", "symbol": "✳", "description": "Prendedor festivo elaborado con mostacillas Miyuki.", "price": 18504},
     {"id": "prendedor-gorro", "name": "Gorro Navideño", "category": "prendedores", "collection": "Prendedor", "symbol": "❋", "description": "Un detalle navideño tejido a mano.", "price": 14254},
 ]
+PRODUCTS_BY_ID = {product["id"]: product for product in PRODUCTS}
 
 
 def format_price(value: int) -> str:
@@ -66,16 +85,97 @@ def image_data_uri(path: Path) -> str:
 def add_to_cart(product: dict, variant_label: str, price: int) -> None:
     key = f"{product['id']}::{variant_label}"
     cart = st.session_state.cart
+    st.session_state.last_confirmation = None
     if key in cart:
         cart[key]["quantity"] += 1
     else:
         cart[key] = {
+            "product_id": product["id"],
             "name": product["name"],
             "collection": product["collection"],
             "variant": variant_label,
             "price": price,
             "quantity": 1,
         }
+
+
+def recommendation_profile(product: dict) -> tuple[str, str]:
+    name = product["name"].casefold()
+    category = product["category"]
+    if any(word in name for word in ("arcoíris", "colombia", "millos", "girasol", "mariposa", "pingüino")):
+        style = "colorido"
+    elif "zodiaco" in name or category in ("prendedores", "colgantes"):
+        style = "elegante"
+    else:
+        style = "minimalista"
+
+    if category in ("llaveros", "colgantes"):
+        occasion = "regalo"
+    elif category == "prendedores" or "zodiaco" in name or "fiesta" in name:
+        occasion = "fiesta"
+    else:
+        occasion = "diario"
+    return style, occasion
+
+
+def product_recipe(product: dict, variant: str) -> dict[str, int]:
+    category = product["category"]
+    name = product["name"].casefold()
+    if category == "pulseras":
+        bead_type = "delica" if "delica" in name else "rocalla"
+        count_match = re.search(r"\d+", product["collection"])
+        bead_count = int(count_match.group()) if count_match else 7
+        recipe = {bead_type: max(2, round(bead_count * 0.35)), "hilo": 2}
+        if variant == "Con terminación":
+            recipe["cierre"] = 1
+        return recipe
+    if category == "llaveros":
+        return {"delica": 7, "rocalla": 2, "hilo": 4, "dije": 1}
+    if category == "colgantes":
+        return {"delica": 4, "rocalla": 2, "hilo": 3, "dije": 1}
+    return {"rocalla": 4, "hilo": 2, "cristal": 2}
+
+
+def product_hours(product: dict) -> float:
+    if product["category"] == "pulseras":
+        count_match = re.search(r"\d+", product["collection"])
+        bead_count = int(count_match.group()) if count_match else 7
+        return 1.0 + bead_count / 10
+    return {
+        "llaveros": 1.5,
+        "colgantes": 1.0,
+        "prendedores": 1.25,
+    }[product["category"]]
+
+
+def order_requirements() -> dict[str, int]:
+    required: dict[str, int] = {}
+    for key, item in st.session_state.cart.items():
+        product_id = item.get("product_id", key.split("::", 1)[0])
+        product = PRODUCTS_BY_ID.get(product_id)
+        if product is None:
+            continue
+        for material, amount in product_recipe(product, item["variant"]).items():
+            required[material] = required.get(material, 0) + amount * item["quantity"]
+    return required
+
+
+def quote_totals() -> dict[str, float | int]:
+    cart = st.session_state.cart
+    units = sum(item["quantity"] for item in cart.values())
+    subtotal = sum(item["price"] * item["quantity"] for item in cart.values())
+    discount_rate = 0.15 if units >= 10 else 0.10 if units >= 5 else 0.05 if units >= 3 else 0
+    discount = round(subtotal * discount_rate)
+    taxable_amount = subtotal - discount
+    tax = round(taxable_amount * IVA_RATE)
+    return {
+        "units": units,
+        "subtotal": subtotal,
+        "discount_rate": discount_rate,
+        "discount": discount,
+        "tax": tax,
+        "total": taxable_amount + tax,
+    }
 
 
 def apply_zodiac_selection() -> None:
@@ -226,12 +326,10 @@ def render_product(product: dict, index: int) -> None:
 def render_cart() -> None:
     st.subheader("Tu pedido, con intención")
     cart = st.session_state.cart
-    total_quantity = sum(item["quantity"] for item in cart.values())
-    total_price = sum(item["price"] * item["quantity"] for item in cart.values())
-
+    totals = quote_totals()
     metric_quantity, metric_total = st.columns(2)
-    metric_quantity.metric("Piezas", total_quantity)
-    metric_total.metric("Total de referencia", format_price(total_price))
+    metric_quantity.metric("Piezas", totals["units"])
+    metric_total.metric("Total estimado", format_price(totals["total"]))
 
     if not cart:
         st.info("Tu pedido comienza con una intención. Agrega tus diseños favoritos para ver aquí el resumen.")
@@ -243,7 +341,8 @@ def render_cart() -> None:
             variant = "" if item["variant"] == "Diseño único" else f" · {item['variant']}"
             st.markdown(
                 f"**{item['name']}**  \n"
-                f"<small>{item['collection']}{variant} · {format_price(item['price'])} c/u</small>",
+                f"<small>{item['collection']}{variant} · "
+                f"{format_price(item['price'])} c/u</small>",
                 unsafe_allow_html=True,
             )
         with quantity_col:
@@ -253,68 +352,50 @@ def render_cart() -> None:
                 del cart[key]
                 st.rerun()
 
-    st.caption("Precios de referencia en pesos colombianos. El envío se cotiza por separado.")
+    st.divider()
+    st.write(f"Subtotal: **{format_price(totals['subtotal'])}**")
+    if totals["discount"]:
+        st.write(
+            f"Descuento por volumen ({totals['discount_rate']:.0%}): "
+            f"**−{format_price(totals['discount'])}**"
+        )
+    st.write(f"IVA (19%): **{format_price(totals['tax'])}**")
+    st.subheader(f"Total estimado: {format_price(totals['total'])}")
+    st.caption("Precios y cálculo de IVA de referencia; envío por cotizar.")
+
     lines = [
-        f"- {item['quantity']} x {item['name']} "
-        f"({item['variant']}): {format_price(item['price'] * item['quantity'])}"
+        f"- {item['quantity']} x {item['name']} ({item['variant']}): "
+        f"{format_price(item['price'] * item['quantity'])}"
         for item in cart.values()
     ]
     order_text = "\n".join(
         [
-            "Hola, quisiera consultar disponibilidad para este pedido:",
+            "Cotización estimada · Miyuki Accesorios",
             *lines,
-            f"Total de referencia: {format_price(total_price)}",
-            "Gracias.",
+            f"Subtotal: {format_price(totals['subtotal'])}",
+            f"Descuento: {format_price(totals['discount'])}",
+            f"IVA (19%): {format_price(totals['tax'])}",
+            f"Total estimado: {format_price(totals['total'])}",
+            "Envío por cotizar. Valores sujetos a confirmación.",
         ]
     )
     download_col, clear_col = st.columns(2)
     with download_col:
         st.download_button(
-            "Descargar resumen del pedido",
+            "Descargar cotización",
             data=order_text,
-            file_name="pedido-miyuki.txt",
+            file_name="cotizacion-miyuki.txt",
             mime="text/plain",
             width="stretch",
         )
     with clear_col:
         if st.button("Vaciar pedido", width="stretch"):
-            st.session_state.cart.clear()
+            cart.clear()
+            st.session_state.last_confirmation = None
             st.rerun()
 
 
-def main() -> None:
-    st.set_page_config(
-        page_title="Miyuki Accesorios | Amuletos hechos a mano",
-        page_icon=str(ASSETS / "logo-miyuki.png"),
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
-    render_styles()
-    st.session_state.setdefault("cart", {})
-    st.session_state.setdefault("zodiac_filter", "")
-
-    logo = image_data_uri(ASSETS / "logo-miyuki.png")
-    sakura = image_data_uri(ASSETS / "ilustraciones" / "ramo-sakura.svg")
-    st.markdown(
-        f"""
-        <section class="hero-panel">
-          <div>
-            <div class="hero-kicker">✳ Hecho a mano, con intención</div>
-            <h1 class="hero-title">Un pequeño universo <em>en tus manos.</em></h1>
-            <p class="hero-description">Accesorios Miyuki tejidos puntada a puntada. Inspiración japonesa, naturaleza y un toque de magia astral para acompañarte cada día.</p>
-            <div class="hero-kicker">Pequeños detalles, energía infinita</div>
-          </div>
-          <div class="hero-art">
-            <div class="hero-orbit"></div>
-            <img class="hero-logo" src="{logo}" alt="Logo de Miyuki Accesorios">
-            <img class="hero-sakura" src="{sakura}" alt="">
-          </div>
-        </section>
-        <div class="promise-strip">和 &nbsp; Inspiración japonesa &nbsp; · &nbsp; ✺ Tejido artesanal &nbsp; · &nbsp; ☾ Detalles con significado</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
+def render_catalog() -> None:
     heading_col, search_col = st.columns([1.3, 0.7], vertical_alignment="bottom")
     with heading_col:
         st.markdown('<p class="section-kicker">Colección Miyuki</p>', unsafe_allow_html=True)
@@ -378,8 +459,299 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    st.divider()
-    render_cart()
+
+def render_add_to_order() -> None:
+    st.subheader("Agregar productos al pedido")
+    product = st.selectbox("Diseño", PRODUCTS, format_func=lambda item: item["name"])
+    variant_index = 0
+    variants = product.get("variants")
+    if variants:
+        variant_index = st.selectbox(
+            "Acabado",
+            options=range(len(variants)),
+            format_func=lambda value: (
+                f"{variants[value][0]} · {format_price(variants[value][1])}"
+            ),
+            key="order_variant",
+        )
+    variant, price = product_price(product, variant_index)
+    quantity = st.number_input("Cantidad", min_value=1, max_value=100, value=1, step=1)
+    st.write(f"Precio unitario: **{format_price(price)}**")
+    if st.button("Agregar al pedido", type="primary"):
+        for _ in range(quantity):
+            add_to_cart(product, variant, price)
+        st.session_state.last_confirmation = None
+        st.success(f"{quantity} × {product['name']} agregado(s) al pedido.")
+
+
+def render_recommendations() -> None:
+    st.subheader("Recomendación personalizada")
+    st.caption("El estilo y la ocasión se estimaron a partir del nombre y tipo de cada diseño.")
+    style_col, occasion_col = st.columns(2)
+    with style_col:
+        style = st.selectbox(
+            "¿Qué estilo prefieres?", STYLE_OPTIONS, key="recommendation_style"
+        )
+    with occasion_col:
+        occasion = st.selectbox(
+            "¿Para qué ocasión?", OCCASION_OPTIONS, key="recommendation_occasion"
+        )
+    budget = st.number_input(
+        "Presupuesto máximo por pieza (COP)",
+        min_value=5000,
+        max_value=500000,
+        value=65000,
+        step=5000,
+        key="recommendation_budget",
+    )
+
+    recommendations = []
+    for product in PRODUCTS:
+        product_style, product_occasion = recommendation_profile(product)
+        _, price = product_price(product)
+        if price > budget:
+            continue
+        score = 2 * (product_style == style) + (product_occasion == occasion)
+        recommendations.append((score, price, product))
+    recommendations.sort(key=lambda result: (-result[0], result[1], result[2]["name"]))
+    if not recommendations:
+        st.info("No encontramos diseños dentro de ese presupuesto. Prueba con un monto mayor.")
+        return
+
+    st.write(f"Diseños que caben en tu presupuesto: **{len(recommendations)}**")
+    best_score = recommendations[0][0]
+    for score, price, product in recommendations[:8]:
+        with st.container(border=True):
+            style_label, occasion_label = recommendation_profile(product)
+            match = "Ideal para ti" if score == 3 else "Coincide con tu estilo" if score == 2 else "También puede gustarte"
+            st.markdown(f"**{product['name']}** · {match}")
+            st.caption(
+                f"{style_label.title()} · Para {occasion_label} · "
+                f"{format_price(price)}"
+            )
+            if product.get("variants"):
+                variant, _ = product_price(product)
+            else:
+                variant = "Diseño único"
+            if st.button("＋ Agregar recomendación", key=f"recommend-{product['id']}"):
+                add_to_cart(product, variant, price)
+                st.toast(f"{product['name']} se agregó a tu pedido.")
+    if best_score == 0:
+        st.caption("No hay coincidencias exactas, pero mostramos opciones dentro de tu presupuesto.")
+
+
+def render_inventory() -> None:
+    st.subheader("Inventario de materiales")
+    st.info(
+        "Inventario de demostración: los stocks y costos iniciales son valores de ejemplo "
+        "y solo se guardan durante esta sesión."
+    )
+    rows = []
+    for material in st.session_state.inventory.values():
+        rows.append(
+            {
+                "Material": material["name"],
+                "Stock": material["stock"],
+                "Unidad": material["unit"],
+                "Costo estimado": format_price(material["cost"]),
+                "Estado": "Stock bajo" if material["stock"] < 20 else "Disponible",
+            }
+        )
+    st.dataframe(rows, hide_index=True, width="stretch")
+
+
+def render_production_plan() -> None:
+    st.subheader("Verificar materiales y planificar producción")
+    cart = st.session_state.cart
+    if not cart:
+        st.info("Agrega productos al pedido para consultar los materiales y la producción.")
+        return
+
+    required = order_requirements()
+    inventory = st.session_state.inventory
+    shortages = {
+        material: max(0, quantity - inventory[material]["stock"])
+        for material, quantity in required.items()
+    }
+    shortages = {material: quantity for material, quantity in shortages.items() if quantity > 0}
+    rows = [
+        {
+            "Material": inventory[material]["name"],
+            "Necesario": quantity,
+            "Disponible": inventory[material]["stock"],
+            "Faltante": max(0, quantity - inventory[material]["stock"]),
+            "Unidad": inventory[material]["unit"],
+        }
+        for material, quantity in required.items()
+    ]
+    st.dataframe(rows, hide_index=True, width="stretch")
+
+    hours = sum(
+        product_hours(PRODUCTS_BY_ID[item.get("product_id", key.split("::", 1)[0])])
+        * item["quantity"]
+        for key, item in cart.items()
+    )
+    production_days = ceil(hours / HOURS_PER_DAY)
+    restock_cost = sum(
+        quantity * inventory[material]["cost"]
+        for material, quantity in shortages.items()
+    )
+    delivery_days = production_days + (RESTOCK_DAYS if shortages else 0)
+    delivery_date = date.today() + timedelta(days=delivery_days)
+    metric_hours, metric_days, metric_delivery = st.columns(3)
+    metric_hours.metric("Trabajo estimado", f"{hours:.1f} h")
+    metric_days.metric("Días de producción", production_days)
+    metric_delivery.metric("Entrega estimada", delivery_date.strftime("%d/%m/%Y"))
+    st.caption(f"Estimación calculada con {HOURS_PER_DAY} horas de trabajo al día.")
+    if shortages:
+        st.warning(
+            f"Faltan materiales para completar el pedido. Compra estimada: "
+            f"{format_price(restock_cost)}. Se agregan {RESTOCK_DAYS} días para reabastecer."
+        )
+    else:
+        st.success("Hay materiales suficientes para producir este pedido.")
+    st.caption("Recetas y tiempos inventados como referencia; no sustituyen una ficha técnica real.")
+
+
+def render_confirmation() -> None:
+    st.subheader("Confirmar pedido")
+    cart = st.session_state.cart
+    if not cart:
+        confirmation = st.session_state.get("last_confirmation")
+        if confirmation:
+            st.success(
+                f"Pedido confirmado. Total estimado: {format_price(confirmation['total'])}. "
+                "El inventario de demostración se actualizó."
+            )
+        else:
+            st.info("Tu pedido está vacío. Agrega productos antes de confirmar.")
+        return
+
+    totals = quote_totals()
+    st.write(f"Piezas en el pedido: **{totals['units']}**")
+    st.write(f"Total estimado con descuento e IVA: **{format_price(totals['total'])}**")
+    required = order_requirements()
+    inventory = st.session_state.inventory
+    shortages = {
+        material: quantity - inventory[material]["stock"]
+        for material, quantity in required.items()
+        if quantity > inventory[material]["stock"]
+    }
+    if shortages:
+        st.error("No se puede confirmar hasta reabastecer los materiales faltantes:")
+        for material, quantity in shortages.items():
+            st.write(f"- {inventory[material]['name']}: faltan {quantity} {inventory[material]['unit']}")
+        st.caption("Usa la opción 8 para reabastecer y vuelve a confirmar.")
+        return
+
+    st.warning(
+        "Al confirmar, se descontarán materiales del inventario de demostración de esta sesión "
+        "y se vaciará el pedido."
+    )
+    if st.button("Confirmar y descontar inventario", type="primary"):
+        for material, quantity in required.items():
+            inventory[material]["stock"] -= quantity
+        st.session_state.last_confirmation = {"total": totals["total"]}
+        cart.clear()
+        st.rerun()
+
+
+def render_restock() -> None:
+    st.subheader("Reabastecer inventario")
+    st.caption("Los cambios aplican solo a tu sesión de demostración.")
+    if st.session_state.get("restock_message"):
+        st.success(st.session_state.restock_message)
+        st.session_state.restock_message = ""
+    inventory = st.session_state.inventory
+    material_key = st.selectbox(
+        "Material",
+        options=list(inventory),
+        format_func=lambda key: (
+            f"{inventory[key]['name']} · stock actual: {inventory[key]['stock']} "
+            f"{inventory[key]['unit']}"
+        ),
+    )
+    amount = st.number_input("Cantidad que ingresa", min_value=1, max_value=100000, value=10, step=1)
+    if st.button("Registrar reabastecimiento"):
+        inventory[material_key]["stock"] += amount
+        st.session_state.restock_message = (
+            f"Nuevo stock de {inventory[material_key]['name']}: "
+            f"{inventory[material_key]['stock']} {inventory[material_key]['unit']}."
+        )
+        st.rerun()
+
+
+def render_hero() -> None:
+    logo = image_data_uri(ASSETS / "logo-miyuki.png")
+    sakura = image_data_uri(ASSETS / "ilustraciones" / "ramo-sakura.svg")
+    st.markdown(
+        f"""
+        <section class="hero-panel">
+          <div>
+            <div class="hero-kicker">✳ Hecho a mano, con intención</div>
+            <h1 class="hero-title">Un pequeño universo <em>en tus manos.</em></h1>
+            <p class="hero-description">Accesorios Miyuki tejidos puntada a puntada. Inspiración japonesa, naturaleza y un toque de magia astral para acompañarte cada día.</p>
+            <div class="hero-kicker">Pequeños detalles, energía infinita</div>
+          </div>
+          <div class="hero-art">
+            <div class="hero-orbit"></div>
+            <img class="hero-logo" src="{logo}" alt="Logo de Miyuki Accesorios">
+            <img class="hero-sakura" src="{sakura}" alt="">
+          </div>
+        </section>
+        <div class="promise-strip">和 &nbsp; Inspiración japonesa &nbsp; · &nbsp; ✺ Tejido artesanal &nbsp; · &nbsp; ☾ Detalles con significado</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Miyuki Accesorios | Amuletos hechos a mano",
+        page_icon=str(ASSETS / "logo-miyuki.png"),
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+    render_styles()
+    st.session_state.setdefault("cart", {})
+    st.session_state.setdefault("zodiac_filter", "")
+    st.session_state.setdefault("inventory", deepcopy(INITIAL_INVENTORY))
+    st.session_state.setdefault("last_confirmation", None)
+    render_hero()
+    st.caption(
+        "El catálogo conserva los precios de referencia actuales. "
+        "Las recetas, costos de materiales, horas y stocks son datos inventados para demostración."
+    )
+
+    tabs = st.tabs(
+        [
+            "1. Ver catálogo",
+            "2. Ver inventario",
+            "3. Recomendar accesorios",
+            "4. Agregar al pedido",
+            "5. Ver cotización",
+            "6. Planificar producción",
+            "7. Confirmar pedido",
+            "8. Reabastecer",
+        ]
+    )
+    with tabs[0]:
+        render_catalog()
+    with tabs[1]:
+        render_inventory()
+    with tabs[2]:
+        render_recommendations()
+    with tabs[3]:
+        render_add_to_order()
+    with tabs[4]:
+        render_cart()
+    with tabs[5]:
+        render_production_plan()
+    with tabs[6]:
+        render_confirmation()
+    with tabs[7]:
+        render_restock()
+
     st.divider()
     st.markdown('<p class="section-kicker">Nuestra esencia</p>', unsafe_allow_html=True)
     st.header("El arte de crear despacito.")

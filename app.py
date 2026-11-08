@@ -207,6 +207,11 @@ def render_styles() -> None:
         [data-testid="stTabs"] [data-testid="stTab"][role="tab"] [data-testid="stMarkdownContainer"], [data-testid="stTabs"] [data-testid="stTab"][role="tab"] p { color:inherit !important; opacity:1 !important; }
         [data-testid="stTabs"] [data-testid="stTab"][role="tab"][aria-selected="true"] { color:#123e38 !important; background:#daf4e9 !important; }
         [data-testid="stTabs"] [data-testid="stTab"][role="tab"]:focus-visible { outline:2px solid #17685d !important; outline-offset:2px; }
+        [data-testid="stRadio"] label[data-testid="stRadioOption"] { color:#173e38 !important; opacity:1 !important; }
+        [data-testid="stRadio"] label[data-testid="stRadioOption"] p,
+        [data-testid="stRadio"] label[data-testid="stRadioOption"] span { color:#173e38 !important; opacity:1 !important; }
+        [data-testid="stRadio"] label[data-testid="stRadioOption"][data-selected="true"] { color:#123e38 !important; font-weight:600; }
+        [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"] { background-color:transparent; }
         .hero-panel { position:relative; display:grid; grid-template-columns:1.05fr .95fr; align-items:center; gap:2rem; min-height:380px; margin:.4rem 0 1.3rem; padding:2.4rem clamp(1.3rem,5vw,4.2rem); overflow:hidden; border:1px solid rgba(32,153,130,.18); border-radius:20px; background:radial-gradient(ellipse at 74% 44%,rgba(94,212,189,.46),transparent 39%),radial-gradient(ellipse at 7% 94%,rgba(122,221,193,.31),transparent 36%),linear-gradient(120deg,#d9f4e9,#bfece0 58%,#e6f7ec); box-shadow:0 12px 40px rgba(27,113,91,.08); }
         .hero-kicker { color:#197566; font-size:.72rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
         .hero-title { max-width:600px; margin:.8rem 0; color:#123e38; font:400 clamp(2.7rem,5vw,5rem)/1.02 'Playfair Display',Georgia,serif; letter-spacing:-.04em; }
